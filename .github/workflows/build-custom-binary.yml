@@ -20,9 +20,10 @@ jobs:
       - name: Build default frontend
         working-directory: web/default
         run: DISABLE_ESLINT_PLUGIN=true VITE_REACT_APP_VERSION=$(cat ../../VERSION) bun run build
-      - name: Build classic frontend
-        working-directory: web/classic
-        run: VITE_REACT_APP_VERSION=$(cat ../../VERSION) bun run build
+      - name: Prepare classic embed placeholder
+        run: |
+          rm -rf web/classic/dist
+          cp -a web/default/dist web/classic/dist
       - name: Test backend
         run: go test ./controller ./model ./relay/... ./service/... ./router/...
       - name: Build binary
