@@ -1,0 +1,43 @@
+name: Build custom New API binary
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+      - name: Install frontend dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+      - name: Build default frontend
+        working-directory: web/default
+        run: DISABLE_ESLINT_PLUGIN=true VITE_REACT_APP_VERSION=$(cat ../../VERSION) bun run build
+      - name: Build classic frontend
+        working-directory: web/classic
+        run: VITE_REACT_APP_VERSION=$(cat ../../VERSION) bun run build
+      - name: Test backend
+        run: go test ./controller ./model ./relay/... ./service/... ./router/...
+      - name: Build binary
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+          GOEXPERIMENT: greenteagc
+        run: go build -ldflags "-s -w -X 'github.com/QuantumNous/new-api/common.Version=$(cat VERSION)'" -o new-api
+      - name: Package checksums
+        run: sha256sum new-api > new-api.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: new-api-linux-amd64
+          path: |
+            new-api
+            new-api.sha256
+          retention-days: 7
