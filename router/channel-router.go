@@ -33,6 +33,12 @@ func registerChannelRoutes(apiRouter *gin.RouterGroup) {
 			middleware.RequirePermission(route.permission),
 			route.handler,
 		)
+		if route.path == "/" {
+			channelRoute.Handle(route.method, "",
+				middleware.RequirePermission(route.permission),
+				route.handler,
+			)
+		}
 	}
 }
 

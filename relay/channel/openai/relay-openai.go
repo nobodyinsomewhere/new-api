@@ -195,6 +195,26 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)
 	}
 	logger.LogDebug(c, "upstream response body: %s", responseBody)
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		var errorResponse dto.OpenAITextResponse
+		if err := common.Unmarshal(responseBody, &errorResponse); err == nil {
+			if oaiError := errorResponse.GetOpenAIError(); oaiError != nil && (oaiError.Type != "" || oaiError.Message != "") {
+				if oaiError.Type == "" {
+					oaiError.Type = "upstream_error"
+				}
+				return nil, types.WithOpenAIError(*oaiError, resp.StatusCode)
+			}
+		}
+		message := strings.TrimSpace(string(responseBody))
+		if message == "" {
+			message = fmt.Sprintf("upstream returned HTTP %d with empty body", resp.StatusCode)
+		}
+		return nil, types.WithOpenAIError(types.OpenAIError{
+			Message: message,
+			Type:    "upstream_error",
+			Code:    resp.StatusCode,
+		}, resp.StatusCode)
+	}
 	// Unmarshal to simpleResponse
 	if info.ChannelType == constant.ChannelTypeOpenRouter && info.ChannelOtherSettings.IsOpenRouterEnterprise() {
 		// 尝试解析为 openrouter enterprise

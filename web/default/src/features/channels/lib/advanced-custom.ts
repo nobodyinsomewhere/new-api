@@ -178,6 +178,20 @@ const geminiQueryAuth = (): AdvancedCustomRouteAuth => ({
 export const ADVANCED_CUSTOM_TEMPLATE_OPTIONS: AdvancedCustomTemplateOption[] =
   [
     {
+      value: 'claude_code_messages_as_openai_chat',
+      label: 'Claude Code / Anthropic Messages as OpenAI Chat',
+      config: {
+        advanced_routes: [
+          {
+            incoming_path: '/v1/chat/completions',
+            upstream_path: '/v1/messages',
+            converter: 'openai_chat_completions_to_anthropic_messages',
+            auth: apiKeyHeaderAuth(),
+          },
+        ],
+      },
+    },
+    {
       value: 'official_openai_chat',
       label: 'Official OpenAI Chat',
       config: {

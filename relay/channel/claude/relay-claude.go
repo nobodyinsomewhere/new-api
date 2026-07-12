@@ -896,6 +896,18 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claudeInfo *ClaudeResponseInfo, httpResp *http.Response, data []byte) *types.NewAPIError {
 	var claudeResponse dto.ClaudeResponse
 	err := common.Unmarshal(data, &claudeResponse)
+	if httpResp != nil && (httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusMultipleChoices) {
+		if err == nil {
+			if claudeError := claudeResponse.GetClaudeError(); claudeError != nil && claudeError.Type != "" {
+				return types.WithClaudeError(*claudeError, httpResp.StatusCode)
+			}
+		}
+		message := strings.TrimSpace(string(data))
+		if message == "" {
+			message = fmt.Sprintf("upstream returned HTTP %d", httpResp.StatusCode)
+		}
+		return types.NewOpenAIError(fmt.Errorf("upstream returned HTTP %d: %s", httpResp.StatusCode, message), types.ErrorCodeBadResponseStatusCode, httpResp.StatusCode)
+	}
 	if err != nil {
 		return types.NewError(err, types.ErrorCodeBadResponseBody)
 	}

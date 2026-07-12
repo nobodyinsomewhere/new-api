@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -1235,21 +1236,31 @@ func FetchModels(c *gin.Context) {
 
 	response, err := client.Do(request)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": err.Error(),
-		})
-		return
-	}
-	//check status code
-	if response.StatusCode != http.StatusOK {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Failed to fetch models",
+			"message": fmt.Sprintf("请求模型列表失败: %s", err.Error()),
 		})
 		return
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		bodyText := strings.TrimSpace(string(bodyBytes))
+		if len(bodyText) > 1200 {
+			bodyText = bodyText[:1200] + "..."
+		}
+		message := fmt.Sprintf("获取模型列表失败: upstream returned HTTP %d", response.StatusCode)
+		if bodyText != "" {
+			message = fmt.Sprintf("%s: %s", message, bodyText)
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": message,
+			"status":  response.StatusCode,
+		})
+		return
+	}
 
 	var result struct {
 		Data []struct {
@@ -1258,9 +1269,9 @@ func FetchModels(c *gin.Context) {
 	}
 
 	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": fmt.Sprintf("解析模型列表失败: %s", err.Error()),
 		})
 		return
 	}

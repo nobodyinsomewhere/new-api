@@ -1054,6 +1054,7 @@ const EditChannelModal = (props) => {
     setLoading(true);
     const models = [];
     let err = false;
+    let errorMessage = t('获取模型列表失败');
 
     if (isEdit) {
       // 如果是编辑模式，使用已有的 channelId 获取模型列表
@@ -1086,10 +1087,12 @@ const EditChannelModal = (props) => {
             models.push(...res.data.data);
           } else {
             err = true;
+            errorMessage = res?.data?.message || errorMessage;
           }
         } catch (error) {
           console.error('Error fetching models:', error);
           err = true;
+          errorMessage = error?.response?.data?.message || error?.message || errorMessage;
         }
       }
     }
@@ -1103,7 +1106,7 @@ const EditChannelModal = (props) => {
       setLoading(false);
       return uniqueModels;
     } else {
-      showError(t('获取模型列表失败'));
+      showError(errorMessage);
     }
     setLoading(false);
     return null;

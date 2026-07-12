@@ -8,7 +8,7 @@ This is an AI API gateway/proxy built with Go. It aggregates 40+ upstream AI pro
 
 ## Tech Stack
 
-- **Backend**: Go 1.22+, Gin web framework, GORM v2 ORM
+- **Backend**: Go 1.26.5 pinned for local/deploy builds via `/home/workspace/.tools/go` and `new-api-deploy/build-with-pinned-go.sh`. Do not use system `/usr/bin/go` (currently old) for this project.
 - **Frontend**: React 19, TypeScript, Rsbuild, Base UI, Tailwind CSS
 - **Databases**: SQLite, MySQL, PostgreSQL (all three must be supported)
 - **Cache**: Redis (go-redis) + in-memory cache
@@ -55,6 +55,12 @@ web/             — Frontend themes container
 - CLI tools: `bun run i18n:sync` (from `web/default/`)
 
 ## Rules
+
+### Deployment / local builds
+
+- For deploy builds, use `file 'new-api-deploy/build-with-pinned-go.sh'`; it prepends `/home/workspace/.tools/go/bin`, sets `GOTOOLCHAIN=local`, checks `go.mod`, backs up the old deployed binary, builds, verifies the embedded Go version string, and atomically replaces `file 'new-api-deploy/new-api'`.
+- Do not run plain `go build` for deploys unless `PATH` is explicitly pinned to `/home/workspace/.tools/go/bin`; the system Go in `/usr/bin/go` is too old and will cause confusing version drift/failures.
+- When adding or changing upstream channel models, verify candidate IDs from the provider `/models` endpoint or the New API model list before writing DB/config. Do not add older model IDs when the user asks for latest models.
 
 ### Common Code Quality
 
